@@ -1,0 +1,98 @@
+---
+output: html_document
+resource_files:
+- Data/2015_Le_Mans/Grid.csv
+- Data/2015_Le_Mans/Analysis.csv
+- Data/2015_Le_Mans/Classification.csv
+- Data/2016_Spa/Grid.csv
+- Data/2016_Spa/Analysis.csv
+- Data/2016_Spa/Classification.csv
+- Data/2016_Silverstone/Grid.csv
+- Data/2016_Silverstone/Analysis.csv
+- Data/2016_Silverstone/Classification.csv
+runtime: shiny
+---
+```{r init,cache=TRUE,echo=FALSE}
+source("WEC_Analysis.R")
+
+Le_Mans.2015 <- WEC.Analysis(2015, "Le_Mans")
+Silverstone.2016 <- WEC.Analysis(2016, "Silverstone")
+Spa.2016 <- WEC.Analysis(2016, "Spa")
+```
+
+```{r sel_race,echo=FALSE}
+selectInput("race", label=h3("Select Race"), 
+  choices=list(
+    "Le Mans 2015"="Le_Mans.2015",
+    "Silverstone 2016"="Silverstone.2016",
+    "Spa 2016"="Spa.2016"), 
+  selected=1)
+```
+
+### Lap Time Distribution
+```{r lap_times,echo=FALSE}
+inputPanel(
+  sliderInput("cutoff", label="Lap Time Cutoff",
+    min=60, max=600, value=300, step=1),
+  checkboxGroupInput("classes", label="Classes to Include", 
+    choices=list("LMP1", "LMP2", "LMGTE Pro", "LMGTE Am"),
+    selected=list("LMP1", "LMP2", "LMGTE Pro", "LMGTE Am")),
+  checkboxInput("by_time", label="Plot by Time", value=TRUE)
+)
+
+get_race <- function() {
+  list(
+    "Le_Mans.2015"=Le_Mans.2015,
+    "Silverstone.2016"=Silverstone.2016,
+    "Spa.2016"=Spa.2016
+  )[[input$race]] 
+}
+get_data <- function() {
+  Analysis <- get_race()$Analysis
+  # Analysis <- subset(Analysis, !Enter.Pit & is.na(Pit.Time))
+  data <- subset(Analysis, Lap.Time < input$cutoff & CLASS %in% input$classes)
+  data
+}
+
+renderPlot({
+  data <- get_data()
+  qplot(if (input$by_time) Time/3600 else Lap, Lap.Time,
+    data=data,
+    colour=CLASS
+  ) + plot_styles$color_by_class + (
+    if (input$by_time) xlab("Hour") else xlab("Lap")
+  ) + (
+    if (input$by_time) plot_styles$scale_x_hour
+    else scale_x_continuous(breaks=seq(0,500,5), minor_breaks=seq(0,500,20))
+  )
+})
+```
+
+### Lap Time Distribution by Class
+```{r lap_time_dist,echo=FALSE}
+renderPlot({
+  data <- get_data()
+  qplot(Lap.Time, group=CLASS, data=data, geom="density", colour=CLASS, asp=1/4) + plot_styles$color_by_class
+})
+```
+
+### Lap Time Distribution for LMP1 Manufacturers
+```{r lap_time_lmp1,echo=FALSE}
+inputPanel(
+  sliderInput("lmp1_cutoff", label="Lap Time Cutoff",
+    min=60, max=600, value=300, step=1),
+  checkboxInput("by_car", label="By Car", value=FALSE),
+  checkboxInput("hy_only", label="Hybrid Only", value=TRUE)
+)
+renderPlot({
+  data <- get_race()$Analysis
+  qplot(Lap.Time, group=(if (input$by_car) NUMBER else MANUFACTURER),
+        data=subset(data,CLASS=="LMP1" & (!input$hy_only | GROUP=="H") & Lap.Time < input$lmp1_cutoff), 
+        colour=MANUFACTURER, geom="density", asp=1/4)
+})
+```
+
+### Grid vs. Finishing Positions
+```{r finishing_plot,echo=FALSE}
+renderPlot({ get_race()$make_plots()$finishing })
+```
