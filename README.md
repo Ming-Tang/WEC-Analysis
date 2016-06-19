@@ -21,4 +21,4 @@ Interactive app for exploring lap time distribution and finishing positions of W
 Requires [Shiny](http://shiny.rstudio.com) to run.
 
 ## Screenshot
-![](http://i.imgur.com/2iyKJkd.png)
+![](screenshot.png)

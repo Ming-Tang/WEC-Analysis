@@ -4,7 +4,7 @@ library(stringr)
 library(ggplot2)
   
 plot_styles <- new.env()
-plot_styles$class_colors <- c("LMGTE Am"="Orange","LMGTE Pro"="Green",LMP2="Blue",LMP1="Red")
+plot_styles$class_colors <- c("LMGTE Am"="Orange","LMGTE Pro"="Green",LMP2="Blue",LMP1="Red","CDNT"="gray28")
 plot_styles$color_by_class <- scale_colour_manual(name="Class",values=plot_styles$class_colors)
 plot_styles$fill_by_class <- scale_fill_manual(name="Class",values=plot_styles$class_colors)
 plot_styles$scale_x_hour <- scale_x_continuous(breaks=0:24,minor_breaks=seq(0,24,1/6))
@@ -178,6 +178,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     DF$Class <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$CLASS)
     DF$Vehicle <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$VEHICLE)
     DF$Team <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$TEAM)
+    DF$Description <- mapply(DF$Car.Number, FUN=function(n) { c <- get_car(n); sprintf("%d %s: %s [%s]", n, c$TEAM, c$VEHICLE, c$CLASS) })
     DF
   }
   
@@ -190,19 +191,18 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   Positions <- fill_info(Positions)
     
   make_plots <- function() {
-    attach(plot_styles)
     
     lap_plt <- NA
     if (analyze_events) {
       lap_plt <- qplot(Time/3600, Key/10, data=Events, geom="line", group=Car.Number, colour=Class)
       lap_plt <- lap_plt + xlab("Hour") + ylab("Lap")
-      lap_plt <- lap_plt + scale_x_hour + scale_y_continuous(breaks=seq(0,400,50),minor_breaks=seq(0,400,5))
-      lap_plt <- lap_plt + color_by_class + geom_line(size=0)
+      lap_plt <- lap_plt + plot_styles$scale_x_hour + scale_y_continuous(breaks=seq(0,400,50),minor_breaks=seq(0,400,5))
+      lap_plt <- lap_plt + plot_styles$color_by_class + geom_line(size=0)
     }
     
     finishing_plt <- qplot(Grid, Finishing, data=Positions, colour=Class, label=Car.Number) + xlab("Grid Position") + ylab("Finishing Position")
     finishing_plt <- finishing_plt + geom_label(aes(fill=Class), data=Positions, colour="white", fontface="bold", label.size=0)
-    finishing_plt <- finishing_plt + color_by_class + fill_by_class
+    finishing_plt <- finishing_plt + plot_styles$color_by_class + plot_styles$fill_by_class
     finishing_plt <- finishing_plt + scale_x_continuous(breaks=1:100, minor_breaks=1:100) + scale_y_continuous(breaks=1:100, minor_breaks=1:100)
     
     #plot(subset(Analysis,is.na(Pit.Time & Lap.Time < 600), select=c("Lap.Time","S1.Time","S2.Time","S3.Time")))
@@ -223,6 +223,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   e$Events <- Events 
   e$Car.Info <- Car.Info
   e$make_plots <- make_plots
+  e$fill_info <- fill_info
   
   e
 }
