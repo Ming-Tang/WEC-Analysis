@@ -119,13 +119,13 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   
     # Sector events
     Events.S1 <- Events.Lap
-    Events.S1$Lap <- Events.S1$Lap - 1
+    Events.S1$Lap <- Events.S1$Lap - 1L
     Events.S1$Enter.Pit <- F
     Events.S1$Pit.Time <- NA
     Events.S1$Lap.Time <- NA
     Events.S2 <- Events.S1
-    Events.S1$Sector <- 1
-    Events.S2$Sector <- 2
+    Events.S1$Sector <- 1L
+    Events.S2$Sector <- 2L
     
     Events.Lap$Sector.Time <- apply_parse_timing(Analysis$S3)
     Events.Lap$Lap.Time <- Analysis$Lap.Time
@@ -145,7 +145,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Analysis.L0 <- subset(Analysis, LAP_NUMBER==1)
     Events.L0 <- Make.Events(nrow(Analysis.L0))
     
-    Events.L0$Lap <- 0
+    Events.L0$Lap <- 0L
     Events.L0$Car.Number <- Analysis.L0$NUMBER
     Events.L0$Driver.Number <- Analysis.L0$DRIVER_NUMBER
     Events.L0$Time <- round(Analysis.L0$Time - Analysis.L0$Lap.Time, digits=6) # they should all equal to zero
