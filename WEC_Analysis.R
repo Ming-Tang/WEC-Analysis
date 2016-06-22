@@ -171,7 +171,8 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   
   Car.Info <- Classification[order(Classification$NUMBER),]
   row.names(Car.Info) <- Car.Info$NUMBER
-  get_car <- function(n) { Car.Info[as.character(n),] }
+  Car.Info.List <- setNames(split(Car.Info, seq(nrow(Car.Info))), rownames(Car.Info))
+  get_car <- function(n) { Car.Info.List[[as.character(n)]] }
   
   # Fill in info for Class, Vehicle and Team by Car.Number
   fill_info <- function(DF) {
