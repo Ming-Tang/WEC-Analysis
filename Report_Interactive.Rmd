@@ -39,7 +39,7 @@ selectInput("race", label=h3("Select Race"),
 ```{r lap_times,echo=FALSE}
 inputPanel(
   sliderInput("cutoff", label="Lap Time Cutoff",
-    min=60, max=600, value=300, step=1),
+    min=60, max=1200, value=300, step=1),
   checkboxGroupInput("classes", label="Classes to Include", 
     choices=list("LMP1", "LMP2", "LMGTE Pro", "LMGTE Am", "CDNT"),
     selected=list("LMP1", "LMP2", "LMGTE Pro", "LMGTE Am", "CDNT")),
@@ -87,7 +87,7 @@ renderPlot({
 ```{r lap_time_lmp1,echo=FALSE}
 inputPanel(
   sliderInput("lmp1_cutoff", label="Lap Time Cutoff",
-    min=60, max=600, value=300, step=1),
+    min=60, max=1200, value=300, step=1),
   checkboxInput("by_car", label="By Car", value=FALSE),
   checkboxInput("hy_only", label="Hybrid Only", value=TRUE)
 )

@@ -2,12 +2,45 @@ library(codetools)
 library(plyr)
 library(stringr)
 library(ggplot2)
+library(Rcpp)
+Rcpp::sourceCpp('RcppLibrary.cpp')
+
   
 plot_styles <- new.env()
 plot_styles$class_colors <- c("LMGTE Am"="Orange","LMGTE Pro"="Green",LMP2="Blue",LMP1="Red","CDNT"="gray28")
 plot_styles$color_by_class <- scale_colour_manual(name="Class",values=plot_styles$class_colors)
 plot_styles$fill_by_class <- scale_fill_manual(name="Class",values=plot_styles$class_colors)
 plot_styles$scale_x_hour <- scale_x_continuous(breaks=0:24,minor_breaks=seq(0,24,1/6))
+  
+### Fill in Grid
+
+fill_grid <- function(Grid.Table) {
+  # Grid.Table is the "Starting Grid" document parsed by Tabula using --area 200,240,810,370
+  n_grid <- length(Grid.Table$V1)
+  Grid.Left <- data.frame(Pos=integer(n_grid), Car.Number=integer(n_grid))
+  Grid.Right <- data.frame(Pos=integer(n_grid), Car.Number=integer(n_grid))
+  
+  Grid.Left$Pos <- Grid.Table$V2
+  Grid.Left$Car.Number <- Grid.Table$V1
+  Grid.Right$Pos <- Grid.Table$V4
+  Grid.Right$Car.Number <- Grid.Table$V5
+  
+  Grid <- rbind(Grid.Left, Grid.Right)
+  Grid <- na.omit(Grid[order(Grid$Pos),])
+  Grid$Car.Number <- as.factor(Grid$Car.Number)
+  row.names(Grid) <- Grid$Pos
+  Grid
+}
+
+parse_timing <- function(x) {
+  l <- strsplit(x, ":")[[1]]
+  ll <- length(l)
+  if (ll == 0) 0
+  else if (ll == 1) as.numeric(l[1])
+  else if (ll == 2) 60*as.numeric(l[1]) + as.numeric(l[2])
+  else if (ll == 3) 3600*as.numeric(l[1]) + 60*as.numeric(l[2]) + as.numeric(l[3])
+  else NA
+}
 
 WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   Prefix <- paste("./Data/", year, "_", race, sep='')
@@ -15,26 +48,6 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   Classification <- read.csv(paste(Prefix, "/Classification.csv", sep=""), sep=";")
   Analysis <- read.csv(paste(Prefix, "/Analysis.csv", sep=""), sep=";")
   Grid.Table <- read.csv(paste(Prefix, "/Grid.csv", sep=""), header=FALSE)
-  
-  ### Fill in Grid
-  
-  fill_grid <- function(Grid.Table) {
-    # Grid.Table is the "Starting Grid" document parsed by Tabula using --area 200,240,810,370
-    n_grid <- length(Grid.Table$V1)
-    Grid.Left <- data.frame(Pos=integer(n_grid), Car.Number=integer(n_grid))
-    Grid.Right <- data.frame(Pos=integer(n_grid), Car.Number=integer(n_grid))
-    
-    Grid.Left$Pos <- Grid.Table$V2
-    Grid.Left$Car.Number <- Grid.Table$V1
-    Grid.Right$Pos <- Grid.Table$V4
-    Grid.Right$Car.Number <- Grid.Table$V5
-    
-    Grid <- rbind(Grid.Left, Grid.Right)
-    Grid <- na.omit(Grid[order(Grid$Pos),])
-    Grid$Car.Number <- as.factor(Grid$Car.Number)
-    row.names(Grid) <- Grid$Pos
-    Grid
-  }
   
   Grid <- fill_grid(Grid.Table)
   
@@ -47,21 +60,8 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   
   ### Fill in Analysis
   
-  parse_timing <- function(timing) {
-    if (str_count(timing, ":") == 2) {
-      parts <- str_match(timing, "(\\d+)\\:(\\d+)\\:([\\d\\.]+)")
-      as.numeric(parts[2]) * 3600 + as.numeric(parts[3]) * 60 + as.numeric(parts[4])
-    } else if (str_count(timing, ":") == 1) {
-      parts <- str_match(timing, "(\\d+)\\:([\\d\\.]+)")
-      as.numeric(parts[2]) * 60 + as.numeric(parts[3])
-    } else if (timing == "") {
-      NA  
-    } else {
-      as.numeric(timing)
-    }
-  }
-  
-  apply_parse_timing <- function(col) mapply(function(f) parse_timing(as.character(f)), col)
+  #apply_parse_timing <- function(col) mapply(function(f) parse_timing(as.character(f)), col)
+  apply_parse_timing <- function(col) Rcpp_apply_parse_timing(as.character(col))
   
   fill_analysis <- function(Analysis, Classification, Grid) {
     Analysis$NUMBER <- as.factor(Analysis$NUMBER)
@@ -179,7 +179,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     DF$Class <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$CLASS)
     DF$Vehicle <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$VEHICLE)
     DF$Team <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$TEAM)
-    DF$Description <- mapply(DF$Car.Number, FUN=function(n) { c <- get_car(n); sprintf("%d %s: %s [%s]", n, c$TEAM, c$VEHICLE, c$CLASS) })
+    #DF$Description <- mapply(DF$Car.Number, FUN=function(n) { c <- get_car(n); sprintf("%d %s: %s [%s]", n, c$TEAM, c$VEHICLE, c$CLASS) })
     DF
   }
   
