@@ -1,0 +1,53 @@
+---
+output: html_document
+resource_files:
+- Data/2015_Le_Mans/Grid.csv
+- Data/2015_Le_Mans/Analysis.csv
+- Data/2015_Le_Mans/Classification.csv
+- Data/2016_Spa/Grid.csv
+- Data/2016_Spa/Analysis.csv
+- Data/2016_Spa/Classification.csv
+- Data/2016_Silverstone/Grid.csv
+- Data/2016_Silverstone/Analysis.csv
+- Data/2016_Silverstone/Classification.csv
+- Data/2016_Le_Mans/Grid.csv
+- Data/2016_Le_Mans/Analysis.csv
+- Data/2016_Le_Mans/Classification.csv
+runtime: shiny
+---
+```{r init,cache=FALSE,echo=FALSE,warning=FALSE}
+source("WEC_Analysis.R")
+source("Gap_Analysis.R")
+source("WEC_Races.R")
+```
+
+```{r sel_race,echo=FALSE}
+selectInput("race", label=h3("Select Race"), choices=choices, selected="Le_Mans_2016")
+```
+
+### Gap Evolution
+```{r lap_times,echo=FALSE,fig.width=14,fig.height=5}
+inputPanel(
+  selectInput("car1", label="Car 1", choices=list("---"=1,"---"=2), selected=2),
+  selectInput("car2", label="Car 2", choices=list("---"=2,"---"=5), selected=5)
+)
+
+observe({
+  if (!is.null(input$race)) {
+    print(input$race)
+    race <- retrieve_race(input$race)
+    choices <- as.list(as.integer(as.character(race$Car.Info$NUMBER)))
+    names(choices) <- paste(as.character(race$Car.Info$NUMBER), " - ", as.character(race$Car.Info$TEAM), " [", as.character(race$Car.Info$CLASS), "]", sep="")
+    updateSelectInput(session, "car1", choices=choices, selected=as.integer(input$car1))
+    updateSelectInput(session, "car2", choices=choices, selected=as.integer(input$car2))
+  }
+})
+
+renderPlot({
+  if (!is.null(input$race) & !is.null(input$car1) & !is.null(input$car2)) {
+    race <- retrieve_race(input$race)
+    if (input$car1 != input$car2) gap_evolution_graph(race, as.integer(input$car1), as.integer(input$car2))
+    else ggplot(aes(x=0,y=0), data=data.frame()) + geom_text(aes(x=0,y=0), label="Please select two different cars.")
+  }
+})
+```
