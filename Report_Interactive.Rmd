@@ -15,24 +15,14 @@ resource_files:
 - Data/2016_Le_Mans/Classification.csv
 runtime: shiny
 ---
-```{r init,cache=TRUE,echo=FALSE}
+```{r init,cache=FALSE,echo=FALSE,warning=FALSE}
 source("WEC_Analysis.R")
-
-Le_Mans.2015 <- WEC.Analysis(2015, "Le_Mans")
-Silverstone.2016 <- WEC.Analysis(2016, "Silverstone")
-Spa.2016 <- WEC.Analysis(2016, "Spa")
-Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans")
+source("WEC_Races.R")
+get_race <- function() { retrieve_race(input$race)  }
 ```
 
 ```{r sel_race,echo=FALSE}
-selectInput("race", label=h3("Select Race"), 
-  choices=list(
-    "Le Mans 2015"="Le_Mans.2015",
-    "Silverstone 2016"="Silverstone.2016",
-    "Spa 2016"="Spa.2016",
-    "Le Mans 2016"="Le_Mans.2016"
-  ), 
-  selected="Le_Mans.2016")
+selectInput("race", label=h3("Select Race"), choices=choices, selected="Le_Mans_2016")
 ```
 
 ### Lap Time Distribution
@@ -46,16 +36,13 @@ inputPanel(
   checkboxInput("by_time", label="Plot by Time", value=TRUE)
 )
 
-get_race <- function() {
-  list(
-    "Le_Mans.2015"=Le_Mans.2015,
-    "Silverstone.2016"=Silverstone.2016,
-    "Spa.2016"=Spa.2016,
-    "Le_Mans.2016"=Le_Mans.2016
-  )[[input$race]] 
-}
 get_data <- function() {
   Analysis <- get_race()$Analysis
+  min_lap <- 10*floor(min(Analysis$Lap.Time)/10)
+  max_lap <- 10*ceiling(min(max(Analysis$Lap.Time), 1800)/10)
+  updateSliderInput(session, "cutoff", min=min_lap, max=max_lap)
+  updateSliderInput(session, "lmp1_cutoff", min=min_lap, max=max_lap)
+  
   # Analysis <- subset(Analysis, !Enter.Pit & is.na(Pit.Time))
   data <- subset(Analysis, Lap.Time < input$cutoff & CLASS %in% input$classes)
   data

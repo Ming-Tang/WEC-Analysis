@@ -5,7 +5,6 @@ library(ggplot2)
 library(Rcpp)
 Rcpp::sourceCpp('RcppLibrary.cpp')
 
-  
 plot_styles <- new.env()
 plot_styles$class_colors <- c("LMGTE Am"="Orange","LMGTE Pro"="Green",LMP2="Blue",LMP1="Red","CDNT"="gray28")
 plot_styles$color_by_class <- scale_colour_manual(name="Class",values=plot_styles$class_colors)
@@ -42,6 +41,15 @@ parse_timing <- function(x) {
   else NA
 }
 
+get_drivers <- function(Classification) {
+  lst <- lapply(as.list(1:dim(Classification)[1]), FUN=function(i) {
+    row <- Classification[i,]
+    c(as.character(row$DRIVER_1), as.character(row$DRIVER_2), as.character(row$DRIVER_3), as.character(row$DRIVER_4))
+  })
+  names(lst) <- as.character(Classification$NUMBER)
+  lst
+}
+
 WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   Prefix <- paste("./Data/", year, "_", race, sep='')
   
@@ -50,6 +58,8 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   Grid.Table <- read.csv(paste(Prefix, "/Grid.csv", sep=""), header=FALSE)
   
   Grid <- fill_grid(Grid.Table)
+  
+  Drivers <- get_drivers(Classification)
   
   ### Fill in Positions
   
@@ -73,8 +83,8 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Analysis$S2.Time <- apply_parse_timing(Analysis$S2)
     Analysis$S3.Time <- apply_parse_timing(Analysis$S3)
     Analysis$Lap.Time <- apply_parse_timing(Analysis$LAP_TIME)
-    Analysis$Pit.Time <- apply_parse_timing(Analysis$PIT_TIME)
     Analysis$Enter.Pit <- Analysis$CROSSING_FINISH_LINE_IN_PIT == "B"
+    Analysis$Pit.Time <- apply_parse_timing(Analysis$PIT_TIME)
     
     # Time since race start
     Analysis$Time <- apply_parse_timing(Analysis$ELAPSED)
@@ -92,6 +102,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Make.Events <- function(n) {
       data.frame(
         Car.Number=integer(n),
+        Driver.Name=character(n), 
         Driver.Number=integer(n), 
         Time=numeric(n),
         Lap=integer(n),
@@ -111,11 +122,12 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Events.Lap <- Make.Events(NRow)
     Events.Lap$Car.Number <- Analysis$NUMBER
     Events.Lap$Driver.Number <- Analysis$DRIVER_NUMBER
+    Events.Lap$Driver.Name <- Analysis$DRIVER_NAME
     Events.Lap$Time <- Analysis$Time
     
     Events.Lap$Lap <- Analysis$LAP_NUMBER
     Events.Lap$Enter.Pit <- Analysis$Enter.Pit
-    Events.Lap$Pit.Time <- Analysis$Pit.Time
+    Events.Lap$Pit.Time <- ifelse(Analysis$Pit.Time > 1e-2, Analysis$Pit.Time, NA)
   
     # Sector events
     Events.S1 <- Events.Lap
@@ -148,6 +160,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Events.L0$Lap <- 0L
     Events.L0$Car.Number <- Analysis.L0$NUMBER
     Events.L0$Driver.Number <- Analysis.L0$DRIVER_NUMBER
+    Events.L0$Driver.Name <- Analysis.L0$DRIVER_NAME
     Events.L0$Time <- round(Analysis.L0$Time - Analysis.L0$Lap.Time, digits=6) # they should all equal to zero
     Events.L0$Pit.Time <- NA
     Events.L0$Key <- 0
@@ -223,6 +236,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   e$Positions <- Positions
   e$Events <- Events 
   e$Car.Info <- Car.Info
+  e$Drivers <- Drivers
   e$make_plots <- make_plots
   e$fill_info <- fill_info
   
