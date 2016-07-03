@@ -1,3 +1,5 @@
+*.RData
+*.Rdata
 Rprof.out
 *.html
 *.pdf
