@@ -13,6 +13,7 @@ resource_files:
 - Data/2016_Le_Mans/Grid.csv
 - Data/2016_Le_Mans/Analysis.csv
 - Data/2016_Le_Mans/Classification.csv
+- WEC_Races.Rdata
 runtime: shiny
 ---
 ```{r init,cache=FALSE,echo=FALSE,warning=FALSE}
@@ -25,13 +26,35 @@ source("WEC_Races.R")
 selectInput("race", label=h3("Select Race"), choices=choices, selected="Le_Mans_2016")
 ```
 
-### Gap Evolution
-```{r lap_times,echo=FALSE,fig.width=14,fig.height=5}
-inputPanel(
-  selectInput("car1", label="Car 1", choices=list("---"=1,"---"=2), selected=2),
-  selectInput("car2", label="Car 2", choices=list("---"=2,"---"=5), selected=5)
-)
 
+```{r css,echo=FALSE}
+CSS <- "
+  .main-container {
+    max-width: 1500px;
+  }
+"
+tags$style(HTML(CSS))
+```
+
+### Gap Evolution
+```{r gap_evolution_controls,echo=FALSE}
+div(
+  fluidRow(
+    column(4,
+      selectInput("car1", label="Car 1", choices=list("---"=1,"---"=2), selected=2),
+      selectInput("car2", label="Car 2", choices=list("---"=2,"---"=5), selected=5)
+    ),
+    column(8,
+      sliderInput("range", "Lap Range:", min=0, max=400, value = c(0,400)),
+      sliderInput("time_range_max", "log Time Range (max):", min=0, max=10, value=1,step=0.01),
+      sliderInput("time_range_min", "log Time Range (min):", min=0, max=10, value=1, step=0.01)
+    )
+  ),
+  class='shiny-input-panel'
+)
+```
+
+```{r gap_evolution_graph,echo=FALSE,fig.width=18,fig.height=16}
 observe({
   if (!is.null(input$race)) {
     print(input$race)
@@ -46,8 +69,24 @@ observe({
 renderPlot({
   if (!is.null(input$race) & !is.null(input$car1) & !is.null(input$car2)) {
     race <- retrieve_race(input$race)
-    if (input$car1 != input$car2) gap_evolution_graph(race, as.integer(input$car1), as.integer(input$car2))
+    if (input$car1 != input$car2) gap_evolution_graph(race, as.integer(input$car1), as.integer(input$car2), ylim=60*c(-2^input$time_range_min, 2^input$time_range_max), xlim=input$range)
     else ggplot(aes(x=0,y=0), data=data.frame()) + geom_text(aes(x=0,y=0), label="Please select two different cars.")
+  }
+}, height=640)
+```
+
+- Gap: Measured at each sector by the difference of arrival time. Negative means Car 1 is ahead of Car 2.
+- Orange bars: Pitstop times for Car 1
+- Blue bars: Pitstop times for Car 2
+- Green lines: Rate of change in gap
+
+## Classification
+
+```{r classification,echo=FALSE}
+renderTable({
+  if (!is.null(input$race)) {
+    race <- retrieve_race(input$race)
+    as.data.table(race$Classification)[,.(NUMBER,TEAM,TYRES,CLASS,GROUP,STATUS,LAPS,FL_TIME,GAP_PREVIOUS)]
   }
 })
 ```
