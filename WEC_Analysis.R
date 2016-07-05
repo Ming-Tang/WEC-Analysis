@@ -161,7 +161,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Events.L0$Car.Number <- Analysis.L0$NUMBER
     Events.L0$Driver.Number <- Analysis.L0$DRIVER_NUMBER
     Events.L0$Driver.Name <- Analysis.L0$DRIVER_NAME
-    Events.L0$Time <- round(Analysis.L0$Time - Analysis.L0$Lap.Time, digits=6) # they should all equal to zero
+    Events.L0$Time <- 0 #round(Analysis.L0$Time - Analysis.L0$Lap.Time, digits=6) # they should all equal to zero
     Events.L0$Pit.Time <- NA
     Events.L0$Key <- 0
     Events.L0$Lap.Time <- NA

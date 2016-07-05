@@ -3,7 +3,7 @@ library(profvis)
 
 lap_chart <- function(Race, per_sector=FALSE) {
   Grid <- Race$Grid
-  Events <- as.data.table(Race$Events)[Time > 1e-2]
+  Events <- as.data.table(Race$Events)
   setkey(Events, Time)
   setkey(Events, Lap, Sector)
   
@@ -48,7 +48,7 @@ lap_chart <- function(Race, per_sector=FALSE) {
   }
   Lap.Chart[1,] <- as.character(Grid$Car.Number)
   
-  list(Lap.Chart=Lap.Chart, xlab="Lap", xfunc=get_fractional_lap, n_sectors=n_sectors, scales=list(
+  list(Events=Events, Lap.Chart=Lap.Chart, xlab="Lap", xfunc=get_fractional_lap, n_sectors=n_sectors, scales=list(
     scale_x_continuous(breaks=seq(0,500,1), minor_breaks=seq(0, 500, 1/n_sectors)),
     scale_y_continuous(breaks=1:100, minor_breaks=1:100),
     xlab("Lap")
@@ -56,12 +56,17 @@ lap_chart <- function(Race, per_sector=FALSE) {
 }
 
 lap_chart_by_time <- function(Race, times) {
-  Grid <- Race$Grid
+  times <- unique(sort(times))
+  Grid <- as.data.table(Race$Grid)[,Car.Number := as.character(Car.Number)]
+  setkey(Grid, Car.Number)
   Events.Time <- as.data.table(Race$Events)[,.(Car.Number, Time, Lap, Sector)]
-  Events.Time[,Roll.Time := Time][,New.Key := Lap*10 + Sector + 1 - Time / max(Time)]
+  Events.Time[,Roll.Time := Time][
+    # Used to tie-break (lap, sector) combinations. Earlier time for same (lap, sector) have higher value, or at race start, grid position determines value
+    ,New.Key := ifelse(Lap + Sector == 0, -Grid[.(as.character(Car.Number))]$Pos, Lap*10 + Sector + 1 - Time / max(Time))
+  ]
   setkey(Events.Time, Time)
-  
   setkey(Events.Time, Car.Number, Roll.Time)
+  setkey(Grid, Pos)
   
   #sectors <- c(0L)
   sectors <- c(0L,1L,2L)
@@ -94,7 +99,7 @@ lap_chart_by_time <- function(Race, times) {
     i <- i + 1
   }
   
-  list(Lap.Chart=Lap.Chart, xlab="Time", xfunc=function(i) {
+  list(Events=Events.Time, Lap.Chart=Lap.Chart, xlab="Time", xfunc=function(i) {
     ifelse(i == 0, 0.0, ifelse(i == length(times) + 1, times[length(times)], times[i]))
   }, n_sectors=n_sectors, scales=list(xlab("Time"), scale_x_continuous(minor_breaks=times)))
 }
