@@ -3,7 +3,7 @@ library(profvis)
 
 lap_chart <- function(Race, per_sector=FALSE) {
   Grid <- Race$Grid
-  Events <- as.data.table(Race$Events)
+  Events <- as.data.table(Race$Events)[Time > 1e-2]
   setkey(Events, Time)
   setkey(Events, Lap, Sector)
   
@@ -49,15 +49,16 @@ lap_chart <- function(Race, per_sector=FALSE) {
   Lap.Chart[1,] <- as.character(Grid$Car.Number)
   
   list(Lap.Chart=Lap.Chart, xlab="Lap", xfunc=get_fractional_lap, n_sectors=n_sectors, scales=list(
-    scale_x_continuous(breaks=seq(0,500,1), minor_breaks = seq(0, 500, 1/n_sectors)),
-    scale_y_continuous(breaks=1:100, minor_breaks = 1:100) + xlab("Lap")
+    scale_x_continuous(breaks=seq(0,500,1), minor_breaks=seq(0, 500, 1/n_sectors)),
+    scale_y_continuous(breaks=1:100, minor_breaks=1:100),
+    xlab("Lap")
   ))
 }
 
-lap_chart_by_time <- function(Race, Times) {
+lap_chart_by_time <- function(Race, times) {
   Grid <- Race$Grid
-  Events.Time <- as.data.table(Race$Events)[,.(Car.Number, Time, Key)]
-  Events.Time[,Roll.Time := Time][,New.Key := Key * max(Time) * 10 - Time]
+  Events.Time <- as.data.table(Race$Events)[,.(Car.Number, Time, Lap, Sector)]
+  Events.Time[,Roll.Time := Time][,New.Key := Lap*10 + Sector + 1 - Time / max(Time)]
   setkey(Events.Time, Time)
   
   setkey(Events.Time, Car.Number, Roll.Time)
@@ -67,25 +68,25 @@ lap_chart_by_time <- function(Race, Times) {
   
   cars <- as.character(levels(Events.Time$Car.Number))
   n_sectors <- length(sectors)
-  n_laps <- max(Events.Time$Lap)
+  n_laps <- max(Race$Events$Lap)
   n_cars <- length(cars)
   
   standings_at <- function(time) {
     Events.Time[.(cars, Roll.Time=time), .SD, roll=+Inf][order(-New.Key)]
   }
   
-  Lap.Chart <- matrix(NA_character_, nrow=length(Times) + 2, ncol=n_cars)
-  rownames(Lap.Chart) <- c("Grid", sapply(Times, function(t) {
+  Lap.Chart <- matrix(NA_character_, nrow=length(times) + 2, ncol=n_cars)
+  rownames(Lap.Chart) <- c("Grid", sapply(times, function(t) {
     sprintf("%02d:%02d", floor(t %/% 3600), floor((t %% 3600) / 60))
   }), "Finish")
   colnames(Lap.Chart) <- 1:n_cars
   
   Lap.Chart[1,] <- as.character(Grid$Car.Number)
   i <- 2
-  for (time in c(Times, Inf)) {
+  for (time in c(times, Inf)) {
     car_numbers_0 <- as.character(standings_at(time)$Car.Number)
     car_numbers <- car_numbers_0
-    #car_numbers <- unique(car_numbers_0) #, fromLast=TRUE)
+    car_numbers <- unique(car_numbers_0) #, fromLast=TRUE)
     #print(dim(car_numbers)[1])
     #stopifnot(length(unique(car_numbers_0)) == length(car_numbers_0))
     stopifnot(length(car_numbers) == n_cars)
@@ -94,23 +95,25 @@ lap_chart_by_time <- function(Race, Times) {
   }
   
   list(Lap.Chart=Lap.Chart, xlab="Time", xfunc=function(i) {
-    if (i == 0) 0
-    else if (i - 1 == length(Times) + 1) Times[length(Times)]
-    else Times[i]
-  }, n_sectors=n_sectors, scales=list(xlab("Time"), scale_x_continuous(minor_breaks=Times)))
+    ifelse(i == 0, 0.0, ifelse(i == length(times) + 1, times[length(times)], times[i]))
+  }, n_sectors=n_sectors, scales=list(xlab("Time"), scale_x_continuous(minor_breaks=times)))
 }
 
-DT_from_lap_chart <- function(Lap.Chart) {
+DT_from_lap_chart <- function(LC) {
+  Lap.Chart <- LC$Lap.Chart
+  xfunc <- LC$xfunc
   n <- length(Lap.Chart)
-  DT <- data.table(Index=integer(n), Pos=integer(n), Car.Number=character(n))
+  DT <- data.table(Index=integer(n), Pos=integer(n), Car.Number=character(n), X=numeric(n))
   i <- 1L
   xs <- 1L:dim(Lap.Chart)[1L]
   ys <- 1L:dim(Lap.Chart)[2L]
   for (x in xs) {
     for (y in ys) {
+      if (is.na(Lap.Chart[x, y])) next
       set(DT, i, 1L, x)
       set(DT, i, 2L, y)
-      set(DT, i, 3L, as.character(Lap.Chart[x, y]))
+      set(DT, i, 3L, Lap.Chart[x, y])
+      set(DT, i, 4L, xfunc(x))
       i <- i + 1L
    }
   }
@@ -118,7 +121,7 @@ DT_from_lap_chart <- function(Lap.Chart) {
 }
 
 plot_lap_chart <- function(LC) {
-  DT <- DT_from_lap_chart(LC$Lap.Chart)
+  DT <- DT_from_lap_chart(LC)
   n_sectors <- DT$n_sectors
-  qplot(LC$xfunc(Index), Pos, data=subset(DT, !is.na(Car.Number)), group=Car.Number, colour=Car.Number, geom="line") + LC$scales
+  qplot(X, Pos, data=subset(DT, !is.na(Car.Number)), group=Car.Number, colour=Car.Number, geom="line") + LC$scales
 }
