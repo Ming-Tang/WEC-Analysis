@@ -1,0 +1,83 @@
+---
+title: "Le Mans 2016 Pitstops"
+output: html_document
+---
+
+```{r,warning=FALSE}
+library(ggplot2)
+library(data.table)
+```
+
+```{r, cache=TRUE}
+source("./WEC_Analysis.R")
+Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans", TRUE)
+source("./Pit_Analysis.R")
+P <- Analyze.Pitstops(Le_Mans.2016)
+attach(P)
+```
+
+# Pit Schedule
+
+```{r, fig.width=14, fig.height=12}
+ggplot(Pit.Analysis, aes(x=Time/3600, y=Car.Number, col=Class, label=Lap)) +
+  geom_errorbarh(aes(height=ifelse(Driver.Change, 1, 0.5), xmin=Time/3600,
+                     xmax=(Time+Pit.Time)/3600, yend=Car.Number)) +
+  plot_styles$color_by_class + xlab("Hour") +
+  scale_x_continuous(breaks=0:24, minor_breaks=seq(0, 24, 1/6))
+```
+
+# Summary of Pitstops
+
+```{r, fig.width=12, fig.height=4}
+ggplot(Pit.Summary, aes(reorder(Car.Number, -Laps.Stint), Laps.Stint, fill=Class)) +
+  geom_bar(stat="identity") + plot_styles$fill_by_class + xlab("Laps per Stint")
+ggplot(Pit.Summary, aes(reorder(Car.Number, -Pit.Time.Lap), Pit.Time.Lap, fill=Class)) +
+  geom_bar(stat="identity") + plot_styles$fill_by_class + xlab("Pit Time per Lap")
+```
+
+# Analysis of Pitstops
+
+```{r}
+pit_analysis_style <- list(
+  geom_jitter(alpha=0.4, size=4), 
+  plot_styles$color_by_class,
+  scale_x_continuous(breaks=c(), minor_breaks=0),
+  xlab(""),
+  theme(strip.text.x = element_text(size=18, face="bold"))
+)
+```
+
+```{r, fig.width=18, fig.height=18}
+ggplot(subset(Pit.Analysis, 50 < Pit.Time & Pit.Time < 130), aes(x=0, y=Pit.Time, col=Class)) +
+  scale_y_continuous(breaks=seq(0, 300, 10), minor_breaks=seq(0, 300, 5)) + pit_analysis_style + 
+  facet_wrap(~ Car.Number, nrow=2)
+ggplot(subset(Pit.Analysis, TRUE), aes(x=0, y=Stint.Length, col=Class)) +
+  scale_y_continuous(breaks=seq(0, 60, 5), minor_breaks=seq(0, 60, 1)) + pit_analysis_style +
+  facet_wrap(~ Car.Number, nrow=2)
+
+```
+
+```{r, fig.width=18, fig.height=18}
+Pit.Analysis$Vehicle.Name <- paste0(Pit.Analysis$Class, Pit.Analysis$Group, " - ", Pit.Analysis$Vehicle)
+ggplot(subset(Pit.Analysis, 50 < Pit.Time & Pit.Time < 130), aes(x=0, y=Pit.Time, col=Class)) +
+  scale_y_continuous(breaks=seq(0, 300, 10), minor_breaks=seq(0, 300, 5)) + pit_analysis_style +
+  facet_wrap(~ Vehicle.Name, ncol=4)
+ggplot(subset(Pit.Analysis, TRUE), aes(x=0, y=Stint.Length, col=Class)) +
+  scale_y_continuous(breaks=seq(0, 60, 5), minor_breaks=seq(0, 60, 1)) + pit_analysis_style +
+  facet_wrap(~ Vehicle.Name, ncol=4)
+```
+
+```{r}
+qplot(Pit.Time, data=subset(Pit.Analysis, Pit.Time<160), group=Class, fill=Class, geom="density", alpha=I(0.3)) + plot_styles$fill_by_class
+qplot(Stint.Length, data=Pit.Analysis, group=Class, fill=Class, binwidth=1) + plot_styles$fill_by_class
+ggplot(Pit.Analysis, aes(x=Stint.Length, fill=Class)) + geom_bar(position="dodge") + plot_styles$fill_by_class
+ggplot(Pit.Analysis, aes(x=Stint.Length, fill=Class)) + geom_bar() + plot_styles$fill_by_class + facet_wrap(~ Class, ncol=3)
+qplot(Stint.Length, Pit.Time, data=subset(Pit.Analysis, 30 < Pit.Time & Pit.Time < 160),
+      col=Class, geom="jitter", alpha=I(0.5)) + plot_styles$color_by_class
+qplot(Stint.Length, Pit.Time, data=subset(Pit.Analysis, 30 < Pit.Time & Pit.Time < 160),
+      col=Class, geom="jitter", alpha=I(0.5)) + plot_styles$color_by_class + facet_wrap(~ Car.Number)
+qplot(Stint.Length, Pit.Time, data=subset(Pit.Analysis, 30 < Pit.Time & Pit.Time < 160),
+      col=Class, geom="jitter", alpha=I(0.5)) + plot_styles$color_by_class + facet_wrap(~ Class)
+```
+
+# Summary of Pitstops
