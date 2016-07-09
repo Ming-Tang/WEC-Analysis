@@ -100,7 +100,7 @@ lap_chart_by_time <- function(Race, times) {
   }
   
   list(Events=Events.Time, Lap.Chart=Lap.Chart, xlab="Time", xfunc=function(i) {
-    ifelse(i == 0, 0.0, ifelse(i == length(times) + 1, times[length(times)], times[i]))
+    ifelse(i == 1, 0.0, ifelse(i - 1 >= length(times), times[length(times)], times[i]))
   }, n_sectors=n_sectors, scales=list(xlab("Time"), scale_x_continuous(minor_breaks=times)))
 }
 
@@ -108,17 +108,19 @@ DT_from_lap_chart <- function(LC) {
   Lap.Chart <- LC$Lap.Chart
   xfunc <- LC$xfunc
   n <- length(Lap.Chart)
-  DT <- data.table(Index=integer(n), Pos=integer(n), Car.Number=character(n), X=numeric(n))
+  DT <- data.table(Index=integer(n), Pos=integer(n), Car.Number=character(n), Label=character(n), X=numeric(n))
   i <- 1L
   xs <- 1L:dim(Lap.Chart)[1L]
   ys <- 1L:dim(Lap.Chart)[2L]
+  rn <- rownames(Lap.Chart)
   for (x in xs) {
     for (y in ys) {
       if (is.na(Lap.Chart[x, y])) next
       set(DT, i, 1L, x)
       set(DT, i, 2L, y)
       set(DT, i, 3L, Lap.Chart[x, y])
-      set(DT, i, 4L, xfunc(x))
+      set(DT, i, 4L, rn[x])
+      set(DT, i, 5L, xfunc(x))
       i <- i + 1L
    }
   }
@@ -128,5 +130,6 @@ DT_from_lap_chart <- function(LC) {
 plot_lap_chart <- function(LC) {
   DT <- DT_from_lap_chart(LC)
   n_sectors <- DT$n_sectors
-  qplot(X, Pos, data=subset(DT, !is.na(Car.Number)), group=Car.Number, colour=Car.Number, geom="line") + LC$scales
+  qplot(X, Pos, data=subset(DT, !is.na(Car.Number)),
+        group=Car.Number, col=Car.Number, geom="line") + LC$scales
 }
