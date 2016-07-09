@@ -51,7 +51,7 @@ get_data <- function() {
 
 renderPlot({
   data <- get_data()
-  qplot(if (input$by_time) Time/3600 else Lap, Lap.Time,
+  qplot(if (input$by_time) Time/3600 else LAP_NUMBER, Lap.Time,
     data=data,
     colour=CLASS
   ) + plot_styles$color_by_class + (

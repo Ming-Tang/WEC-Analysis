@@ -1,11 +1,13 @@
+library(data.table)
 library(codetools)
 library(plyr)
 library(stringr)
 library(ggplot2)
 library(Rcpp)
+
 Rcpp::sourceCpp('RcppLibrary.cpp')
 
-plot_styles <- new.env()
+plot_styles <- list()
 plot_styles$class_colors <- c("LMGTE Am"="Orange","LMGTE Pro"="Green",LMP2="Blue",LMP1="Red","CDNT"="gray28")
 plot_styles$color_by_class <- scale_colour_manual(name="Class",values=plot_styles$class_colors)
 plot_styles$fill_by_class <- scale_fill_manual(name="Class",values=plot_styles$class_colors)
@@ -16,8 +18,8 @@ plot_styles$scale_x_hour <- scale_x_continuous(breaks=0:24,minor_breaks=seq(0,24
 fill_grid <- function(Grid.Table) {
   # Grid.Table is the "Starting Grid" document parsed by Tabula using --area 200,240,810,370
   n_grid <- length(Grid.Table$V1)
-  Grid.Left <- data.frame(Pos=integer(n_grid), Car.Number=integer(n_grid))
-  Grid.Right <- data.frame(Pos=integer(n_grid), Car.Number=integer(n_grid))
+  Grid.Left <- data.table(Pos=integer(n_grid), Car.Number=integer(n_grid))
+  Grid.Right <- data.table(Pos=integer(n_grid), Car.Number=integer(n_grid))
   
   Grid.Left$Pos <- Grid.Table$V2
   Grid.Left$Car.Number <- Grid.Table$V1
@@ -28,6 +30,7 @@ fill_grid <- function(Grid.Table) {
   Grid <- na.omit(Grid[order(Grid$Pos),])
   Grid$Car.Number <- as.factor(Grid$Car.Number)
   row.names(Grid) <- Grid$Pos
+  setkey(Grid, Pos, Car.Number)
   Grid
 }
 
@@ -53,19 +56,20 @@ get_drivers <- function(Classification) {
 WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   Prefix <- paste("./Data/", year, "_", race, sep='')
   
-  Classification <- read.csv(paste(Prefix, "/Classification.csv", sep=""), sep=";")
-  Analysis <- read.csv(paste(Prefix, "/Analysis.csv", sep=""), sep=";")
-  Grid.Table <- read.csv(paste(Prefix, "/Grid.csv", sep=""), header=FALSE)
+  Classification <- data.table(read.csv(paste(Prefix, "/Classification.csv", sep=""), sep=";"))
+  Classification[,NUMBER := factor(NUMBER)]
+  setkey(Classification, NUMBER)
   
+  Analysis <- data.table(read.csv(paste(Prefix, "/Analysis.csv", sep=""), sep=";"))
+  Grid.Table <- data.table(read.csv(paste(Prefix, "/Grid.csv", sep=""), header=FALSE))
   Grid <- fill_grid(Grid.Table)
-  
   Drivers <- get_drivers(Classification)
   
   ### Fill in Positions
   
   Positions <- merge(
-    subset(Classification,select=c("NUMBER","POSITION")), Grid,
-    by.x=c("NUMBER"),by.y=c("Car.Number"))
+    subset(Classification, select=c("NUMBER","POSITION")), Grid,
+    by.x=c("NUMBER"), by.y=c("Car.Number"))
   names(Positions) <- c("Car.Number","Finishing","Grid")
   
   ### Fill in Analysis
@@ -74,20 +78,20 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   apply_parse_timing <- function(col) Rcpp_apply_parse_timing(as.character(col))
   
   fill_analysis <- function(Analysis, Classification, Grid) {
-    Analysis$NUMBER <- as.factor(Analysis$NUMBER)
-    Analysis$DRIVER_NUMBER <- as.factor(Analysis$DRIVER_NUMBER)
+    Analysis[,`:=`(
+      NUMBER = as.factor(NUMBER),
+      DRIVER_NUMBER = as.factor(DRIVER_NUMBER),
+      Hour = apply_parse_timing(HOUR),
+      S1.Time = apply_parse_timing(S1),
+      S2.Time = apply_parse_timing(S2),
+      S3.Time = apply_parse_timing(S3),
+      Lap.Time = apply_parse_timing(LAP_TIME),
+      Enter.Pit = CROSSING_FINISH_LINE_IN_PIT == "B",
+      Pit.Time = apply_parse_timing(PIT_TIME),
+      Time = apply_parse_timing(Analysis$ELAPSED) # Time since race start
+    )]
     
-    Analysis$Hour <- apply_parse_timing(Analysis$HOUR)
-    
-    Analysis$S1.Time <- apply_parse_timing(Analysis$S1)
-    Analysis$S2.Time <- apply_parse_timing(Analysis$S2)
-    Analysis$S3.Time <- apply_parse_timing(Analysis$S3)
-    Analysis$Lap.Time <- apply_parse_timing(Analysis$LAP_TIME)
-    Analysis$Enter.Pit <- Analysis$CROSSING_FINISH_LINE_IN_PIT == "B"
-    Analysis$Pit.Time <- apply_parse_timing(Analysis$PIT_TIME)
-    
-    # Time since race start
-    Analysis$Time <- apply_parse_timing(Analysis$ELAPSED)
+    setkey(Analysis, NUMBER, Time)
     
     Car.Numbers <- sort(unique(Classification$NUMBER))
     Laps <- max(Analysis$LAP_NUMBER)
@@ -100,7 +104,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   
   fill_events <- function(Analysis, Classification, Grid) {
     Make.Events <- function(n) {
-      data.frame(
+      data.table(
         Car.Number=integer(n),
         Driver.Name=character(n), 
         Driver.Number=integer(n), 
@@ -178,7 +182,7 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
     Events.Finish$Pit.Time <- NA
     
     Events <- rbind(Events.Lap, Events.S1, Events.S2, Events.L0, Events.Finish)
-    Events <- Events[order(Events$Time),]
+    setkey(Events, Time)
     Events
   }
   
@@ -189,14 +193,15 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   
   # Fill in info for Class, Vehicle and Team by Car.Number
   fill_info <- function(DF) {
-    DF$Class <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$CLASS)
-    DF$Vehicle <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$VEHICLE)
-    DF$Team <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$TEAM)
-    #DF$Description <- mapply(DF$Car.Number, FUN=function(n) { c <- get_car(n); sprintf("%d %s: %s [%s]", n, c$TEAM, c$VEHICLE, c$CLASS) })
-    DF
+    #DF$Class <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$CLASS)
+    #DF$Vehicle <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$VEHICLE)
+    #DF$Team <- mapply(DF$Car.Number, FUN=function(n) get_car(n)$TEAM)
+    ##DF$Description <- mapply(DF$Car.Number, FUN=function(n) { c <- get_car(n); sprintf("%d %s: %s [%s]", n, c$TEAM, c$VEHICLE, c$CLASS) })
+    #DF
+    merge(DF, Classification[,.(Car.Number=NUMBER, Team=TEAM, Vehicle=VEHICLE, Class=CLASS)], by="Car.Number")
   }
   
-  Events <- NA
+  Events <- NULL
   if (analyze_events) {
     Events <- fill_events(Analysis=Analysis, Classification=Classification, Grid=Grid)
     Events <- fill_info(Events)
@@ -223,13 +228,13 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   
     #hist(subset(Analysis,is.na(Pit.Time) & Lap.Time < 600)$Lap.Time, breaks=seq(100,600,5))
     
-    e <- new.env()
+    e <- list()
     e$laps <- lap_plt
     e$finishing <- finishing_plt
     e
   }
   
-  e <- new.env()
+  e <- list()
   e$Analysis <- Analysis
   e$Classification <- Classification
   e$Grid <- Grid 
@@ -239,6 +244,5 @@ WEC.Analysis <- function(year, race, analyze_events=FALSE) {
   e$Drivers <- Drivers
   e$make_plots <- make_plots
   e$fill_info <- fill_info
-  
   e
 }

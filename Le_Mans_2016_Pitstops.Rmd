@@ -8,7 +8,7 @@ library(ggplot2)
 library(data.table)
 ```
 
-```{r, cache=TRUE}
+```{r, cache=FALSE}
 source("./WEC_Analysis.R")
 Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans", TRUE)
 source("./Pit_Analysis.R")
