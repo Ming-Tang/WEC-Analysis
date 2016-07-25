@@ -1,12 +1,13 @@
-P <- Analyze.Pitstops(Le_Mans.2016)
+Race <- Nurburgring.2016
+P <- Analyze.Pitstops(Race)
 Pit.Analysis <- P$Pit.Analysis
-LC <- lap_chart_by_time(Le_Mans.2016, seq(0, 24*3600, 20))
+LC <- lap_chart_by_time(Race, seq(0, 6*3600, 20))
 LC.DT <- DT_from_lap_chart(LC)
 setnames(LC.DT, "X", "Time")
 setkey(LC.DT, Car.Number, Time)
 setkey(Pit.Analysis, Car.Number, Roll.Time)
 
-Events.DT <- as.data.table(Le_Mans.2016$Events)
+Events.DT <- as.data.table(Race$Events)
 setkey(Events.DT, Car.Number, Time)
 
 #View(LC.DT)
@@ -22,7 +23,7 @@ qplot(Hour,Pos,data=LC.DT, group=Car.Number, geom="path",
       lineend="round", linejoin="round") +
   #geom_point(aes(Hour, Pos, col=Car.Number, group=Car.Number, alpha=Focus), 
   #           data=subset(LC.DT, In.Pit), size=1.5) +
-  scale_size_discrete(c(0, 3)) + scale_alpha_discrete(c(0, 0.5)) +
+  scale_size_discrete(c(0, 2)) + scale_alpha_discrete(c(0, 0.5)) +
   coord_cartesian(ylim=c(0, 65), xlim=c(0, 24), expand=FALSE) +
   scale_y_continuous(breaks=1:100) +
   scale_x_continuous(breaks=seq(0, 24, 1), minor=seq(0, 24, 1/6)) +

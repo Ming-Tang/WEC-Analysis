@@ -1,0 +1,29 @@
+---
+title: "Lap Charts"
+output: pdf_document
+---
+
+```{r, warning=FALSE}
+source("WEC_Analysis.R")
+source("Gap_Analysis.R")
+source("WEC_Races.R")
+source("Lap_Chart.R")
+
+library(pander)
+```
+
+```{r, results='asis', fig.width=20, fig.height=12}
+for (race in race_list) {
+  pandoc.header(paste0(as.character(gsub("_", " ", race))))
+  race <- retrieve_race(race)
+  LC <- lap_chart(race, TRUE)
+  LC.DT <- race$fill_info(DT_from_lap_chart(LC))
+  LC.DT[, Lap := X]
+  print(
+    qplot(Lap,Pos,data=LC.DT, group=Car.Number, geom="line", col=Class) +
+      plot_styles$color_by_class +
+      coord_cartesian(expand=FALSE)
+  )
+  cat("\n")
+}
+```

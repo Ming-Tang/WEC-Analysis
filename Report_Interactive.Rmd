@@ -13,6 +13,9 @@ resource_files:
 - Data/2016_Le_Mans/Grid.csv
 - Data/2016_Le_Mans/Analysis.csv
 - Data/2016_Le_Mans/Classification.csv
+- Data/2016_Nurburgring/Grid.csv
+- Data/2016_Nurburgring/Analysis.csv
+- Data/2016_Nurburgring/Classification.csv
 - WEC_Races.Rdata
 runtime: shiny
 ---

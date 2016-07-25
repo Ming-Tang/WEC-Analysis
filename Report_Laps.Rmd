@@ -13,6 +13,9 @@ resource_files:
 - Data/2016_Le_Mans/Grid.csv
 - Data/2016_Le_Mans/Analysis.csv
 - Data/2016_Le_Mans/Classification.csv
+- Data/2016_Nurburgring/Grid.csv
+- Data/2016_Nurburgring/Analysis.csv
+- Data/2016_Nurburgring/Classification.csv
 - WEC_Races.Rdata
 runtime: shiny
 ---
@@ -20,12 +23,12 @@ runtime: shiny
 source("WEC_Analysis.R")
 source("Gap_Analysis.R")
 source("WEC_Races.R")
+source("Lap_Chart.R")
 ```
 
 ```{r sel_race,echo=FALSE}
 selectInput("race", label=h3("Select Race"), choices=choices, selected="Le_Mans_2016")
 ```
-
 
 ```{r css,echo=FALSE}
 CSS <- "
@@ -36,26 +39,13 @@ CSS <- "
 tags$style(HTML(CSS))
 ```
 
-### Gap Evolution
-```{r gap_evolution_controls,echo=FALSE}
-div(
-  fluidRow(
-    column(4,
-      selectInput("car1", label="Car 1", choices=list("---"=1,"---"=2), selected=2),
-      selectInput("car2", label="Car 2", choices=list("---"=2,"---"=5), selected=5)
-    ),
-    column(8,
-      sliderInput("range", "Lap Range:", min=0, max=400, value = c(0,400)),
-      sliderInput("time_range_max", "log Time Range (max):", min=0, max=10, value=1,step=0.01),
-      sliderInput("time_range_min", "log Time Range (min):", min=0, max=10, value=1, step=0.01)
-    )
-  ),
-  class='shiny-input-panel'
-)
-```
-
-```{r gap_evolution_graph,echo=FALSE,fig.width=18,fig.height=16}
+```{r main,echo=FALSE,fig.width=18,fig.height=16}
 observe({
+  print(input$tab)
+})
+
+observe({
+  print(input$tab)
   if (!is.null(input$race)) {
     print(input$race)
     race <- retrieve_race(input$race)
@@ -65,28 +55,72 @@ observe({
     updateSelectInput(session, "car2", choices=choices, selected=as.integer(input$car2))
   }
 })
+  
+tabsetPanel(id="tab",
+  tabPanel("Lap Chart", id="pc",
+    renderPlot({
+      if (!is.null(input$race)) {
+        race <- retrieve_race(input$race)
+        LC <- lap_chart(race, TRUE)
+        LC.DT <- race$fill_info(DT_from_lap_chart(LC))
+        LC.DT[, Lap := X]
+        qplot(Lap,Pos,data=LC.DT, group=Car.Number, geom="line", col=Class) + plot_styles$color_by_class + coord_cartesian(expand=FALSE)
+      }
+    })
+  ),
+  tabPanel("Position Chart", id="pc",
+    renderPlot({
+      if (!is.null(input$race)) {
+        race <- retrieve_race(input$race)
+        hours <- if (length(grep("Le_Mans", input$race))) 24 else 6
+        LC <- lap_chart_by_time(race, seq(0, hours*3600, 60))
+        LC.DT <- race$fill_info(DT_from_lap_chart(LC))
+        LC.DT$Hour <- LC.DT$X / 3600
+        qplot(Hour,Pos,data=LC.DT, group=Car.Number, geom="line", col=Class) + plot_styles$color_by_class + coord_cartesian(expand=FALSE)
+      }
+    })
+  ),
+  tabPanel("Gap Evolution", id="ge",
+    renderPlot({
+      if (!is.null(input$race) & !is.null(input$car1) & !is.null(input$car2)) {
+        race <- retrieve_race(input$race)
+        if (input$car1 != input$car2) gap_evolution_graph(race, as.integer(input$car1), as.integer(input$car2), ylim=60*c(-2^input$time_range_min, 2^input$time_range_max), xlim=input$range)
+        else ggplot(aes(x=0,y=0), data=data.frame()) + geom_text(aes(x=0,y=0), label="Please select two different cars.")
+      }
+    }, height=640)
+  ),
+  tabPanel("Classification", id="c",
+    renderTable({
+      if (!is.null(input$race)) {
+        race <- retrieve_race(input$race)
+        as.data.table(race$Classification)[,.(NUMBER,TEAM,TYRES,CLASS,GROUP,STATUS,LAPS,FL_TIME,GAP_PREVIOUS)]
+      }
+    })
+  )
+)
+```
 
-renderPlot({
-  if (!is.null(input$race) & !is.null(input$car1) & !is.null(input$car2)) {
-    race <- retrieve_race(input$race)
-    if (input$car1 != input$car2) gap_evolution_graph(race, as.integer(input$car1), as.integer(input$car2), ylim=60*c(-2^input$time_range_min, 2^input$time_range_max), xlim=input$range)
-    else ggplot(aes(x=0,y=0), data=data.frame()) + geom_text(aes(x=0,y=0), label="Please select two different cars.")
-  }
-}, height=640)
+### Gap Evolution (controls)
+```{r gap_evolution_controls,echo=FALSE}
+conditionalPanel(condition="{input$tab == \"Gap Evolution\"}",
+  div(
+    fluidRow(
+      column(4,
+        selectInput("car1", label="Car 1", choices=list("---"=1,"---"=2), selected=2),
+        selectInput("car2", label="Car 2", choices=list("---"=2,"---"=5), selected=5)
+      ),
+      column(8,
+        sliderInput("range", "Lap Range:", min=0, max=400, value = c(0,400)),
+        sliderInput("time_range_max", "log Time Range (max):", min=0, max=10, value=1,step=0.01),
+        sliderInput("time_range_min", "log Time Range (min):", min=0, max=10, value=1, step=0.01)
+      )
+    ),
+    class='shiny-input-panel'
+  )
+)
 ```
 
 - Gap: Measured at each sector by the difference of arrival time. Negative means Car 1 is ahead of Car 2.
 - Orange bars: Pitstop times for Car 1
 - Blue bars: Pitstop times for Car 2
 - Green lines: Rate of change in gap
-
-## Classification
-
-```{r classification,echo=FALSE}
-renderTable({
-  if (!is.null(input$race)) {
-    race <- retrieve_race(input$race)
-    as.data.table(race$Classification)[,.(NUMBER,TEAM,TYRES,CLASS,GROUP,STATUS,LAPS,FL_TIME,GAP_PREVIOUS)]
-  }
-})
-```
