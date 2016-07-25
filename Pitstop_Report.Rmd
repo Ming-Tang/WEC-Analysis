@@ -1,5 +1,5 @@
 ---
-title: "Le Mans 2016 Pitstops"
+title: "Pitstop Report"
 output: html_document
 ---
 
@@ -10,9 +10,10 @@ library(data.table)
 
 ```{r, cache=FALSE}
 source("./WEC_Analysis.R")
-Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans", TRUE)
+#Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans", TRUE)
+Nurburgring.2016 <- WEC.Analysis(2016, "Nurburgring", TRUE)
 source("./Pit_Analysis.R")
-P <- Analyze.Pitstops(Le_Mans.2016)
+P <- Analyze.Pitstops(Nurburgring.2016)
 attach(P)
 ```
 
@@ -30,15 +31,16 @@ ggplot(Pit.Analysis, aes(x=Time/3600, y=Car.Number, col=Class, label=Lap)) +
 
 ```{r, fig.width=12, fig.height=4}
 ggplot(Pit.Summary, aes(reorder(Car.Number, -Laps.Stint), Laps.Stint, fill=Class)) +
-  geom_bar(stat="identity") + plot_styles$fill_by_class + xlab("Laps per Stint")
+  geom_bar(stat="identity") + plot_styles$fill_by_class + ylab("Laps per Stint")
 ggplot(Pit.Summary, aes(reorder(Car.Number, -Pit.Time.Lap), Pit.Time.Lap, fill=Class)) +
-  geom_bar(stat="identity") + plot_styles$fill_by_class + xlab("Pit Time per Lap")
+  geom_bar(stat="identity") + plot_styles$fill_by_class + ylab("Pit Time per Lap")
 ```
 
 # Analysis of Pitstops
 
 ```{r}
 pit_analysis_style <- list(
+  geom_violin(alpha=0.2),
   geom_jitter(alpha=0.4, size=4), 
   plot_styles$color_by_class,
   scale_x_continuous(breaks=c(), minor_breaks=0),
@@ -79,5 +81,3 @@ qplot(Stint.Length, Pit.Time, data=subset(Pit.Analysis, 30 < Pit.Time & Pit.Time
 qplot(Stint.Length, Pit.Time, data=subset(Pit.Analysis, 30 < Pit.Time & Pit.Time < 160),
       col=Class, geom="jitter", alpha=I(0.5)) + plot_styles$color_by_class + facet_wrap(~ Class)
 ```
-
-# Summary of Pitstops

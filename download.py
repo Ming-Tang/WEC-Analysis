@@ -105,7 +105,10 @@ def parse_tree(subtree, **opts):
 
 
 def get_grid_path(series):
-    return series["Race"][("Starting Grid", "PDF")]
+    try:
+        return series["Race"][("Starting Grid", "PDF")]
+    except KeyError:
+        return series["Race"]["Hour 6"][("Starting Grid", "PDF")]
 
 
 def get_hour_key(series):
