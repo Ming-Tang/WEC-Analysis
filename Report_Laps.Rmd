@@ -16,6 +16,12 @@ resource_files:
 - Data/2016_Nurburgring/Grid.csv
 - Data/2016_Nurburgring/Analysis.csv
 - Data/2016_Nurburgring/Classification.csv
+- Data/2016_Mexico/Grid.csv
+- Data/2016_Mexico/Analysis.csv
+- Data/2016_Mexico/Classification.csv
+- Data/2016_COTA/Grid.csv
+- Data/2016_COTA/Analysis.csv
+- Data/2016_COTA/Classification.csv
 - WEC_Races.Rdata
 runtime: shiny
 ---
@@ -93,7 +99,9 @@ tabsetPanel(id="tab",
     renderTable({
       if (!is.null(input$race)) {
         race <- retrieve_race(input$race)
-        as.data.table(race$Classification)[,.(NUMBER,TEAM,TYRES,CLASS,GROUP,STATUS,LAPS,FL_TIME,GAP_PREVIOUS)]
+        TB <- as.data.table(race$Classification)[,.(POSITION,NUMBER,TEAM,TYRES,CLASS,GROUP,STATUS,LAPS,FL_TIME,GAP_PREVIOUS)]
+        setkey(TB, POSITION)
+        TB
       }
     })
   )

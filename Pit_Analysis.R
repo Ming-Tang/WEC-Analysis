@@ -19,7 +19,7 @@ Analyze.Pitstops <- function(Race) {
   Pit.Analysis[, Driver.Change := c(FALSE, diff(Driver.Number) != 0), by=Car.Number]
   Pit.Analysis[, `:=`(
     Stint = cumsum(Pit),
-    Stint.Length = c(0, diff(Lap)),
+    Stint.Length = c(diff(Lap), NA),
     Changes = 1+cumsum(Driver.Change),
     Total.Pit.Time = cumsum(ifelse(Pit, Pit.Time, 0))
   ), by=Car.Number]

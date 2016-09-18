@@ -1,4 +1,4 @@
-Race <- Nurburgring.2016
+Race <- Mexico.2016
 P <- Analyze.Pitstops(Race)
 Pit.Analysis <- P$Pit.Analysis
 LC <- lap_chart_by_time(Race, seq(0, 6*3600, 20))
@@ -24,7 +24,7 @@ qplot(Hour,Pos,data=LC.DT, group=Car.Number, geom="path",
   #geom_point(aes(Hour, Pos, col=Car.Number, group=Car.Number, alpha=Focus), 
   #           data=subset(LC.DT, In.Pit), size=1.5) +
   scale_size_discrete(c(0, 2)) + scale_alpha_discrete(c(0, 0.5)) +
-  coord_cartesian(ylim=c(0, 65), xlim=c(0, 24), expand=FALSE) +
+  coord_cartesian(ylim=c(0, 65), xlim=c(0, 6), expand=FALSE) +
   scale_y_continuous(breaks=1:100) +
   scale_x_continuous(breaks=seq(0, 24, 1), minor=seq(0, 24, 1/6)) +
   scale_size_discrete(range=c(0.6, 2.2)) +
