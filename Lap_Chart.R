@@ -122,7 +122,7 @@ DT_from_lap_chart <- function(LC) {
       set(DT, i, 4L, rn[x])
       set(DT, i, 5L, xfunc(x))
       i <- i + 1L
-   }
+    }
   }
   DT
 }

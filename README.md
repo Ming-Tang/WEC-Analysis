@@ -3,9 +3,18 @@ WEC-Analysis
 
 R scripts to analyze and visualize data from World Endurance Championship races.
 
+```
+source("WEC_Analysis.R") # load WEC.Analysis(...) function
+source("WEC_Races.R")    # load WEC races
+
+source("Lap_Chart.R")      # lap chart and position chart functions
+source("Pit_Analysis.R")   # pitstop analysis functions
+```
+
 # Race Data
 
 The race data is placed in the `Data/` directory. Each race is in its own directory of `Data/<race name>`.
+Race data for 2016 are pre-loaded in the `Data/` folder.
 
 Each race directory should contain the following files:
  - `Analysis.csv`: Chronological analysis

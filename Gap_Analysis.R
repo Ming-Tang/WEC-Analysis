@@ -4,26 +4,45 @@ library(data.table)
 #Spa.2016 <- WEC.Analysis(2016, "Spa", TRUE)
 #Silverstone.2016 <- WEC.Analysis(2016, "Silverstone", TRUE)
 
+find_car <- function(Events, car_number) {
+  DT <- data.table(subset(Events, as.character(Car.Number)==as.character(car_number)))[,.(Lap,Sector,Key,Time,Pit.Time,Driver.Name,Driver.Number)][1:.N-1]
+  DT[,Driver.Change := c(0, diff(as.integer(Driver.Number))) != 0]
+  DT
+}
+
+gap_evolution <- function(Race, car_number_subj, car_number_obj) {
+  Drivers <- Race$Drivers
+  Events <- Race$Events
+  #car_number_subj <- 2
+  #car_number_obj <- 5
+
+  car_subj <- find_car(Events, car_number_subj)
+  car_obj <- find_car(Events, car_number_obj)
+
+  Joined <- merge(car_obj, car_subj, by=c("Lap","Sector"), all=TRUE)
+  Joined[,Gap := Time.y - Time.x]
+  Joined[,DGap := c(0, diff(Gap))]
+  Joined[,Cross := sign(Gap + c(diff(Gap), 0)) != sign(Gap)]
+  Joined
+}
+
 gap_evolution_graph <- function(Race, car_number_subj, car_number_obj, xlim=NA, ylim=NA) {
   
 Drivers <- Race$Drivers
 Events <- Race$Events
 #car_number_subj <- 2
 #car_number_obj <- 5
-
-car_subj <- data.table(subset(Events, as.character(Car.Number)==as.character(car_number_subj)))[,.(Lap,Sector,Key,Time,Pit.Time,Driver.Name,Driver.Number)][1:.N-1]
-car_obj <- data.table(subset(Events, as.character(Car.Number)==as.character(car_number_obj)))[,.(Lap,Sector,Key,Time,Pit.Time,Driver.Name,Driver.Number)][1:.N-1]
-drivers_subj <- Drivers[[as.character(car_number_subj)]]
-drivers_obj <- Drivers[[as.character(car_number_obj)]]
-
-car_subj[,Driver.Change := c(0, diff(as.integer(Driver.Number))) != 0]
-car_obj[,Driver.Change := c(0, diff(as.integer(Driver.Number))) != 0]
+car_subj <- find_car(Events, car_number_subj)
+car_obj <- find_car(Events, car_number_obj)
 
 Joined <- merge(car_obj, car_subj, by=c("Lap","Sector"), all=TRUE)
 Joined[,Gap := Time.y - Time.x]
 Joined[,DGap := c(0, diff(Gap))]
 Joined[,Cross := sign(Gap + c(diff(Gap), 0)) != sign(Gap)]
 #if (length(xlim) > 1) Joined <- Joined[xlim[1] <= Lap & Lap <= xlim[2]]
+
+drivers_subj <- Drivers[[as.character(car_number_subj)]]
+drivers_obj <- Drivers[[as.character(car_number_obj)]]
 
 geom_pitstop <- function(data, col, ...) list(
   geom_vline(aes(xintercept=Lap), linetype=3, alpha=0.45, col=col, show.legend=FALSE, data=subset(data, !is.na(Pit.Time))),

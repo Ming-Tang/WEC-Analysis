@@ -1,6 +1,8 @@
 ---
 title: "Lap Charts"
 output: pdf_document
+geometry: margin=0.4in
+classoption: landscape
 ---
 
 ```{r, warning=FALSE}
@@ -12,7 +14,7 @@ source("Lap_Chart.R")
 library(pander)
 ```
 
-```{r, results='asis', fig.width=20, fig.height=12}
+```{r, results='asis', fig.width=20, fig.height=14}
 for (race in race_list) {
   pandoc.header(paste0(as.character(gsub("_", " ", race))))
   race <- retrieve_race(race)
@@ -21,8 +23,8 @@ for (race in race_list) {
   LC.DT[, Lap := X]
   print(
     qplot(Lap,Pos,data=LC.DT, group=Car.Number, geom="line", col=Class) +
-      plot_styles$color_by_class +
-      coord_cartesian(expand=FALSE)
+      plot_styles$color_by_class
+      #coord_cartesian(expand=FALSE)
   )
   cat("\n")
 }

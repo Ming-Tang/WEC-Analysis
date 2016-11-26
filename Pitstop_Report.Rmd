@@ -10,11 +10,11 @@ library(data.table)
 
 ```{r, cache=FALSE}
 source("./WEC_Analysis.R")
-#Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans", TRUE)
+Le_Mans.2016 <- WEC.Analysis(2016, "Le_Mans", TRUE)
 #Nurburgring.2016 <- WEC.Analysis(2016, "Nurburgring", TRUE)
-Mexico.2016 <- WEC.Analysis(2016, "Mexico", TRUE)
+#COTA.2016 <- WEC.Analysis(2016, "COTA", TRUE)
 source("./Pit_Analysis.R")
-P <- Analyze.Pitstops(Mexico.2016)
+P <- Analyze.Pitstops(Le_Mans.2016)
 attach(P)
 ```
 

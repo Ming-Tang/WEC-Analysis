@@ -1,27 +1,7 @@
 ---
 output: html_document
 resource_files:
-- Data/2015_Le_Mans/Grid.csv
-- Data/2015_Le_Mans/Analysis.csv
-- Data/2015_Le_Mans/Classification.csv
-- Data/2016_Spa/Grid.csv
-- Data/2016_Spa/Analysis.csv
-- Data/2016_Spa/Classification.csv
-- Data/2016_Silverstone/Grid.csv
-- Data/2016_Silverstone/Analysis.csv
-- Data/2016_Silverstone/Classification.csv
-- Data/2016_Le_Mans/Grid.csv
-- Data/2016_Le_Mans/Analysis.csv
-- Data/2016_Le_Mans/Classification.csv
-- Data/2016_Nurburgring/Grid.csv
-- Data/2016_Nurburgring/Analysis.csv
-- Data/2016_Nurburgring/Classification.csv
-- Data/2016_Mexico/Grid.csv
-- Data/2016_Mexico/Analysis.csv
-- Data/2016_Mexico/Classification.csv
-- Data/2016_COTA/Grid.csv
-- Data/2016_COTA/Analysis.csv
-- Data/2016_COTA/Classification.csv
+- Data/*
 - WEC_Races.Rdata
 runtime: shiny
 ---
@@ -33,7 +13,7 @@ source("Lap_Chart.R")
 ```
 
 ```{r sel_race,echo=FALSE}
-selectInput("race", label=h3("Select Race"), choices=choices, selected="Le_Mans_2016")
+selectInput("race", label=h3("Select Race"), choices=choices, selected="Silverstone_2016")
 ```
 
 ```{r css,echo=FALSE}
@@ -47,13 +27,13 @@ tags$style(HTML(CSS))
 
 ```{r main,echo=FALSE,fig.width=18,fig.height=16}
 observe({
-  print(input$tab)
+  print(paste("Tab:", input$tab))
 })
 
 observe({
-  print(input$tab)
+  print(paste("Tab:", input$tab))
   if (!is.null(input$race)) {
-    print(input$race)
+    print(paste("Loading race:", input$race))
     race <- retrieve_race(input$race)
     choices <- as.list(as.integer(as.character(race$Car.Info$NUMBER)))
     names(choices) <- paste(as.character(race$Car.Info$NUMBER), " - ", as.character(race$Car.Info$TEAM), " [", as.character(race$Car.Info$CLASS), "]", sep="")

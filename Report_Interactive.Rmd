@@ -1,27 +1,7 @@
 ---
 output: html_document
 resource_files:
-- Data/2015_Le_Mans/Grid.csv
-- Data/2015_Le_Mans/Analysis.csv
-- Data/2015_Le_Mans/Classification.csv
-- Data/2016_Spa/Grid.csv
-- Data/2016_Spa/Analysis.csv
-- Data/2016_Spa/Classification.csv
-- Data/2016_Silverstone/Grid.csv
-- Data/2016_Silverstone/Analysis.csv
-- Data/2016_Silverstone/Classification.csv
-- Data/2016_Le_Mans/Grid.csv
-- Data/2016_Le_Mans/Analysis.csv
-- Data/2016_Le_Mans/Classification.csv
-- Data/2016_Nurburgring/Grid.csv
-- Data/2016_Nurburgring/Analysis.csv
-- Data/2016_Nurburgring/Classification.csv
-- Data/2016_Mexico/Grid.csv
-- Data/2016_Mexico/Analysis.csv
-- Data/2016_Mexico/Classification.csv
-- Data/2016_COTA/Grid.csv
-- Data/2016_COTA/Analysis.csv
-- Data/2016_COTA/Classification.csv
+- Data/*
 - WEC_Races.Rdata
 runtime: shiny
 ---
@@ -32,7 +12,7 @@ get_race <- function() { retrieve_race(input$race)  }
 ```
 
 ```{r sel_race,echo=FALSE}
-selectInput("race", label=h3("Select Race"), choices=choices, selected="Le_Mans_2016")
+selectInput("race", label=h3("Select Race"), choices=choices, selected="Silverstone_2016")
 ```
 
 ### Lap Time Distribution
@@ -62,7 +42,7 @@ renderPlot({
   data <- get_data()
   qplot(if (input$by_time) Time/3600 else LAP_NUMBER, Lap.Time,
     data=data,
-    colour=CLASS
+    col=CLASS
   ) + plot_styles$color_by_class + (
     if (input$by_time) xlab("Hour") else xlab("Lap")
   ) + (
@@ -76,7 +56,7 @@ renderPlot({
 ```{r lap_time_dist,echo=FALSE}
 renderPlot({
   data <- get_data()
-  qplot(Lap.Time, group=CLASS, data=data, geom="density", colour=CLASS, asp=1/4) + plot_styles$color_by_class
+  qplot(Lap.Time, group=CLASS, data=data, geom="density", col=CLASS, asp=1/4) + plot_styles$color_by_class
 })
 ```
 
